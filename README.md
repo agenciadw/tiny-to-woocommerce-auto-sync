@@ -2,7 +2,7 @@
 
 Plugin WordPress para sincronização automática de produtos entre Tiny ERP e WooCommerce.
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue.svg)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-5.0%2B-purple.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-777BB4.svg)
@@ -29,6 +29,9 @@ O **DW Atualiza Produtos for Tiny ERP** mantém seu catálogo WooCommerce sincro
 
 - ⚡ **Sincronização Automática** via cron do WordPress
 - 🔄 **Sincronização Manual** sob demanda
+- 📦 **Dois modos de sincronização** - Apenas produtos do WooCommerce ou catálogo completo do Tiny
+- 🔄 **Rotação de páginas** - Percorre todos os produtos ao longo do tempo
+- 🎯 **Sincronizar produto por SKU** - Atualize um produto específico imediatamente
 - 📊 **Logs Detalhados** com formato legível
 - 🔍 **Busca e Filtros** nos logs
 - 🧹 **Limpeza Seletiva** de logs por nível
@@ -45,19 +48,29 @@ O **DW Atualiza Produtos for Tiny ERP** mantém seu catálogo WooCommerce sincro
 - ✅ **Peso** - Peso bruto do produto
 - ✅ **Dimensões** - Largura, altura e comprimento
 
-### Modos de Operação
+### Modos de Sincronização
 
-#### 1. Sincronização Automática
-```
-Cron do WordPress → Busca produtos no Tiny → Atualiza WooCommerce
-⏱️ Intervalos: 15 min, 30 min, 1h, 2x/dia, 1x/dia
-```
+#### Apenas produtos do WooCommerce (recomendado)
+- Processa **somente** produtos que existem na sua loja
+- Ideal quando o Tiny tem muito mais produtos que o WooCommerce (ex: 7300 vs 1707)
+- Agiliza a sincronização e reduz carga na API
+- Ciclo completo em menos execuções
 
-#### 2. Sincronização Manual
-```
-Você clica → Plugin sincroniza → Atualizado!
-⏱️ Tempo: Sob demanda
-```
+#### Catálogo completo do Tiny
+- Percorre todos os produtos do Tiny em rotação de páginas
+- A cada execução processa uma página diferente
+- Ao chegar na última página, reinicia da primeira
+
+### Intervalo e Lote
+
+- **Intervalo:** Tempo entre uma execução e a próxima (15 min, 30 min, 1h, etc.)
+- **Lote:** Quantidade de produtos processados em cada execução (20 a 100)
+- **Sincronização Manual:** Faz a mesma coisa do agendado — processa o próximo lote e avança a rotação
+
+### Sincronizar Produto por SKU
+
+- Atualize um produto específico imediatamente, sem esperar a sincronização em lote
+- Digite o SKU e clique em "Sincronizar Este Produto"
 
 ### Sistema de Logs
 
@@ -128,7 +141,12 @@ Você clica → Plugin sincroniza → Atualizado!
    - Clique em: **"Salvar Configurações"**
    - ✅ Deve aparecer: "Conexão estabelecida com sucesso"
 
-### 2. Sincronização Automática
+### 2. Modo de Sincronização
+
+- **Apenas produtos do WooCommerce (recomendado):** Processa somente produtos que existem na loja. Ideal para Tiny com muitos produtos (ex: 7300) e WooCommerce com menos (ex: 1707).
+- **Catálogo completo do Tiny:** Percorre todos os produtos do Tiny em rotação de páginas.
+
+### 3. Sincronização Automática
 
 1. Marque: ☑️ **"Ativar sincronização automática"**
 2. Escolha o intervalo:
@@ -139,11 +157,13 @@ Você clica → Plugin sincroniza → Atualizado!
    - **Uma vez ao dia** - Mínima frequência
 
 3. Configure:
-   - **Produtos por Lote:** 20 a 50 (padrão: 30)
+   - **Produtos por Lote:** 20 a 100 (padrão: 30). Cada execução processa essa quantidade.
    - **Delay entre Requisições:** 0,5 a 5 segundos (previne bloqueio da API)
    - **Retenção de Logs:** Dias para manter logs (padrão: 30)
 
 4. Clique em: **"Salvar Configurações"**
+
+5. Use **"Reiniciar Rotação"** para voltar ao início (página 1 ou offset 0)
 
 ---
 
@@ -152,8 +172,14 @@ Você clica → Plugin sincroniza → Atualizado!
 ### Sincronização Manual
 
 - Botão **"Executar Sincronização Agora"** na página de configurações
-- Sincroniza imediatamente os produtos do Tiny para o WooCommerce
+- Faz a mesma coisa do agendado: processa o próximo lote e avança a rotação
 - Processa até o limite de produtos por lote configurado
+
+### Sincronizar Produto por SKU
+
+- Campo para digitar o SKU + botão **"Sincronizar Este Produto"**
+- Atualiza um produto específico imediatamente, sem esperar o lote
+- Útil quando você alterou um preço no Tiny e quer atualizar na loja na hora
 
 ### Comportamento Inteligente
 
@@ -236,11 +262,33 @@ Medidas: 11,00 x 11,00 x 25,00 / 12,00 x 12,00 x 26,00 cm
 
 **R:** Não. Configure a **Retenção de Logs** (ex: 30 dias) para remoção automática. Você também pode excluir logs por nível ou limpar todos manualmente.
 
+### 7. Com 100 produtos por lote, a loja pode ficar lenta?
+
+**R:** Em geral, não. A sincronização roda em processo separado. Recomendação: 50 produtos para hospedagem compartilhada; 100 para VPS ou planos com mais recursos. A execução de 100 produtos leva ~4-6 minutos.
+
+### 8. Sincronização manual e agendada fazem a mesma coisa?
+
+**R:** Sim. Ambas processam o próximo lote e avançam a rotação. A manual é útil para não esperar o intervalo agendado.
+
 ---
 
 ## 📝 Changelog
 
 Para o changelog completo, veja [CHANGELOG.md](CHANGELOG.md)
+
+### Versão 0.2.0 (15/02/2026)
+
+#### Novos Recursos
+- 📦 **Modo "Apenas produtos do WooCommerce"** - Processa somente produtos da loja (ideal para Tiny com 7000+ e WooCommerce com 1700)
+- 🔄 **Rotação de páginas** - No modo Tiny, percorre todas as páginas ao longo do tempo
+- 🎯 **Sincronizar produto por SKU** - Atualize um produto específico imediatamente
+- 🔘 **Botão Reiniciar Rotação** - Volte ao início (página 1 ou offset 0)
+- 📊 Lote aumentado para até 100 produtos
+
+#### Melhorias
+- Sincronização manual e agendada usam a mesma lógica
+- Logs incluem informação de página/offset processado
+- Modo WooCommerce reduz carga na API e no servidor
 
 ### Versão 0.1.0 (15/02/2026)
 
@@ -278,7 +326,7 @@ Desenvolvido por **David William da Costa - DW Digital**
 
 ---
 
-**Versão:** 0.1.0  
+**Versão:** 0.2.0  
 **Última Atualização:** 15 de Fevereiro de 2026  
 **Autor:** David William da Costa - DW Digital  
 **Requer:** WordPress 5.8+, WooCommerce 5.0+, PHP 7.4+

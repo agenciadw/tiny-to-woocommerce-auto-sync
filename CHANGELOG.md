@@ -7,6 +7,66 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
+## [0.2.0] - 15/02/2026
+
+### ✨ Novos Recursos
+
+#### Modo de Sincronização
+- **Adicionado** modo "Apenas produtos do WooCommerce" - processa somente produtos que existem na loja
+- **Adicionado** modo "Catálogo completo do Tiny" - percorre todos os produtos do Tiny
+- **Ideal** quando o Tiny tem muito mais produtos (ex: 7300) que o WooCommerce (ex: 1707)
+- **Reduz** carga na API e no servidor ao pular produtos não vinculados
+
+#### Rotação de Páginas (modo Tiny)
+- **Implementado** rotação de páginas - a cada execução processa uma página diferente
+- **Corrigido** problema de processar apenas os primeiros 30-50 produtos (sempre página 1)
+- **Adicionado** estado persistente (página e offset) para próxima execução
+- **Adicionado** ciclo completo - ao chegar na última página, reinicia da primeira
+
+#### Sincronizar Produto por SKU
+- **Adicionado** campo e botão para sincronizar um produto específico por SKU
+- **Útil** para atualizar imediatamente um produto alterado no Tiny, sem esperar o lote
+- **Implementado** endpoint AJAX `tiny_woo_sync_product_by_sku`
+
+#### Interface
+- **Adicionado** botão "Reiniciar Rotação" para voltar ao início (página 1 ou offset 0)
+- **Adicionado** exibição do estado da rotação (próxima página/offset)
+- **Adicionado** seletor de modo de sincronização nas configurações
+
+### 🔧 Melhorias
+
+#### Configurações
+- **Aumentado** limite de produtos por lote de 50 para 100
+- **Adicionado** opção `sync_mode` nas configurações
+- **Adicionado** opção padrão `sync_mode: woocommerce` para novas instalações
+
+#### Sincronização
+- **Unificado** lógica da sincronização manual e agendada (ambas usam `run_sync()`)
+- **Adicionado** método `get_woocommerce_products_with_sku()` para modo WooCommerce
+- **Adicionado** método `count_woocommerce_products_with_sku()` para total de produtos
+- **Adicionado** estado de rotação separado para modo WooCommerce (`tiny_woo_sync_rotation_state_wc`)
+
+#### Logs
+- **Adicionado** informação de página/offset no log de sincronização concluída
+- **Adicionado** suporte a exibição do modo (WooCommerce) e próxima execução
+- **Removido** log de aviso para cada produto não encontrado no WooCommerce (modo Tiny) - evitava spam com milhares de produtos
+
+#### API Tiny
+- **Adicionado** método `list_products_with_pagination()` retornando produtos + página + total_pages
+- **Refatorado** `list_products()` para usar o novo método (compatibilidade mantida)
+
+### 📁 Arquivos Modificados
+
+- `tiny-to-woocommerce-auto-sync.php` - Opção padrão sync_mode
+- `includes/class-sync-manager.php` - Modos de sync, rotação, sync por SKU, helpers WooCommerce
+- `includes/class-tiny-api.php` - list_products_with_pagination
+- `includes/class-settings.php` - sync_mode, batch_size até 100
+- `admin/class-admin-page.php` - AJAX sync_product_by_sku, reset_rotation
+- `admin/views/settings-page.php` - Modo de sync, sync por SKU, reiniciar rotação
+- `admin/views/logs-page.php` - Formato para modo WooCommerce e página
+
+---
+
 ## [0.1.0] - 15/02/2026
 
 ### ✨ Novos Recursos

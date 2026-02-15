@@ -3,7 +3,7 @@
  * Plugin Name: DW Atualiza Produtos for Tiny ERP
  * Plugin URI: http://github.com/agenciadw/tiny-to-woocommerce-auto-sync
  * Description: Sincroniza automaticamente produtos do Tiny ERP para WooCommerce via API, atualizando preços, estoque, peso e dimensões.
- * Version: 0.0.1
+ * Version: 0.2.0
  * Author: David William da Costa
  * Author URI: https://github.com/agenciadw/
  * Text Domain: tiny-woo-sync
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Constantes do plugin
-define('TINY_WOO_SYNC_VERSION', '0.0.1');
+define('TINY_WOO_SYNC_VERSION', '0.2.0');
 define('TINY_WOO_SYNC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TINY_WOO_SYNC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('TINY_WOO_SYNC_PLUGIN_BASENAME', plugin_basename(__FILE__));
