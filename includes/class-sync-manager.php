@@ -85,11 +85,13 @@ class Tiny_WooCommerce_Sync_Manager {
         $updated_count = 0;
         $error_count = 0;
         $skipped_count = 0;
+        $processed_count = 0;
 
         foreach ($wc_product_ids as $wc_product_id) {
             $product = wc_get_product($wc_product_id);
             if (!$product || !$product->get_sku()) {
                 $skipped_count++;
+                $processed_count++;
                 continue;
             }
 
@@ -99,6 +101,7 @@ class Tiny_WooCommerce_Sync_Manager {
             if (!$product_details) {
                 $this->logger->warning('Produto não encontrado no Tiny', array('sku' => $sku));
                 $error_count++;
+                $processed_count++;
                 sleep($delay);
                 continue;
             }
@@ -111,6 +114,18 @@ class Tiny_WooCommerce_Sync_Manager {
                 $error_count++;
             } else {
                 $skipped_count++;
+            }
+            $processed_count++;
+
+            // Salva o progresso a cada 10 produtos para evitar perder o avanço em caso de timeout
+            $next_offset = $current_offset + $processed_count;
+            if ($processed_count % 10 === 0 || $processed_count === count($wc_product_ids)) {
+                $save_offset = ($next_offset >= $total_wc_with_sku) ? 0 : $next_offset;
+                update_option('tiny_woo_sync_rotation_state_wc', array('offset' => $save_offset));
+                $this->logger->info('Progresso salvo (offset ' . $save_offset . ' de ' . $total_wc_with_sku . ')', array(
+                    'processed' => $processed_count,
+                    'mode' => 'woocommerce'
+                ));
             }
 
             sleep($delay);
@@ -132,7 +147,8 @@ class Tiny_WooCommerce_Sync_Manager {
             'skipped' => $skipped_count,
             'mode' => 'woocommerce',
             'next_offset' => $next_offset,
-            'total' => $total_wc_with_sku
+            'total' => $total_wc_with_sku,
+            'processed' => count($wc_product_ids)
         ));
     }
 

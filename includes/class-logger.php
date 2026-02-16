@@ -178,6 +178,32 @@ class Tiny_WooCommerce_Logger {
     }
 
     /**
+     * Obtém logs de produtos atualizados em um período
+     *
+     * @param string $date_from Data inicial (Y-m-d H:i:s)
+     * @param string $date_to   Data final (Y-m-d H:i:s)
+     * @return array Lista de logs com message e created_at
+     */
+    public function get_updated_products_logs($date_from, $date_to) {
+        global $wpdb;
+
+        $query = $wpdb->prepare(
+            "SELECT id, message, context, created_at FROM {$this->table_name}
+             WHERE log_level = %s
+             AND message LIKE %s
+             AND created_at >= %s
+             AND created_at <= %s
+             ORDER BY created_at ASC",
+            self::LEVEL_INFO,
+            '%foi atualizado com sucesso%',
+            $date_from,
+            $date_to
+        );
+
+        return $wpdb->get_results($query);
+    }
+
+    /**
      * Exclui logs por nível (INFO, WARNING, ERROR)
      * @param string $level Nível dos logs a excluir
      * @return int|false Número de linhas excluídas ou false em caso de erro

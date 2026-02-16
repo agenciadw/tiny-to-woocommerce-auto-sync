@@ -77,6 +77,16 @@ class Tiny_WooCommerce_Settings {
         $sanitized['batch_size'] = isset($input['batch_size']) ? intval($input['batch_size']) : 30;
         $sanitized['delay_between_requests'] = isset($input['delay_between_requests']) ? floatval($input['delay_between_requests']) : 1.5;
         $sanitized['log_retention_days'] = isset($input['log_retention_days']) ? intval($input['log_retention_days']) : 30;
+        $sanitized['report_email_enabled'] = isset($input['report_email_enabled']) ? (bool) $input['report_email_enabled'] : false;
+        $sanitized['report_email'] = isset($input['report_email']) ? sanitize_text_field($input['report_email']) : '';
+        $sanitized['report_schedule'] = isset($input['report_schedule']) ? sanitize_text_field($input['report_schedule']) : 'daily';
+
+        if (!in_array($sanitized['report_schedule'], array('daily', 'weekly', 'monthly'), true)) {
+            $sanitized['report_schedule'] = 'daily';
+        }
+
+        // Reagenda relatório por e-mail (usa valores já sanitizados)
+        Tiny_WooCommerce_Sync_Report::reschedule_report_cron($sanitized);
 
         // Valida batch_size
         if ($sanitized['batch_size'] < 20) {

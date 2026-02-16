@@ -11,10 +11,17 @@ $sync_interval = isset($settings['sync_interval']) ? $settings['sync_interval'] 
 $batch_size = isset($settings['batch_size']) ? $settings['batch_size'] : 30;
 $delay = isset($settings['delay_between_requests']) ? $settings['delay_between_requests'] : 1.5;
 $log_retention = isset($settings['log_retention_days']) ? $settings['log_retention_days'] : 30;
+$report_email_enabled = isset($settings['report_email_enabled']) ? $settings['report_email_enabled'] : false;
+$report_email = isset($settings['report_email']) ? $settings['report_email'] : get_option('admin_email');
+$report_schedule = isset($settings['report_schedule']) ? $settings['report_schedule'] : 'daily';
 
 // Próxima execução do cron (wp_date usa o timezone do WordPress)
 $next_sync = wp_next_scheduled('tiny_woo_sync_cron');
 $next_sync_formatted = $next_sync ? wp_date('d/m/Y H:i:s', $next_sync) : 'Não agendado';
+
+// Próximo relatório por e-mail
+$next_report = wp_next_scheduled('tiny_woo_sync_report_cron');
+$next_report_formatted = $next_report ? wp_date('d/m/Y H:i:s', $next_report) : 'Não agendado';
 
 // Estado da rotação
 $rotation_state = Tiny_WooCommerce_Sync_Manager::get_rotation_state();
@@ -92,7 +99,7 @@ $rotation_mode = isset($rotation_state['mode']) ? $rotation_state['mode'] : $syn
                             </select>
                             <p class="description">
                                 <strong>Apenas produtos do WooCommerce:</strong> Processa somente os produtos que existem na sua loja. 
-                                Ideal quando o Tiny tem muito mais produtos (ex: 7300) que o WooCommerce (ex: 1707) — agiliza a sincronização e reduz carga na API.
+                                Ideal quando o Tiny tem muito mais produtos que o WooCommerce — agiliza a sincronização e reduz carga na API.
                             </p>
                             <p class="description">
                                 <strong>Catálogo completo do Tiny:</strong> Percorre todos os produtos do Tiny em rotação de páginas.
@@ -169,6 +176,65 @@ $rotation_mode = isset($rotation_state['mode']) ? $rotation_state['mode'] : $syn
                             <p class="description">
                                 Logs mais antigos que este período serão removidos automaticamente.
                             </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row" colspan="2">
+                            <h3 style="margin: 20px 0 10px 0;">Relatório por E-mail</h3>
+                            <p class="description" style="margin-bottom: 15px;">
+                                Receba um relatório com os produtos atualizados na sincronização. Usa o template do WooCommerce.
+                            </p>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="report_email_enabled">Ativar Relatório</label>
+                        </th>
+                        <td>
+                            <label>
+                                <input type="checkbox" 
+                                       id="report_email_enabled" 
+                                       name="tiny_woo_sync_settings[report_email_enabled]" 
+                                       value="1" 
+                                       <?php checked($report_email_enabled, true); ?>>
+                                Enviar relatório de sincronização por e-mail
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="report_email">E-mail do Destinatário</label>
+                        </th>
+                        <td>
+                            <input type="email" 
+                                   id="report_email" 
+                                   name="tiny_woo_sync_settings[report_email]" 
+                                   value="<?php echo esc_attr($report_email); ?>" 
+                                   class="regular-text"
+                                   placeholder="<?php echo esc_attr(get_option('admin_email')); ?>">
+                            <p class="description">
+                                E-mail(s) separados por vírgula para receber o relatório.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="report_schedule">Frequência do Relatório</label>
+                        </th>
+                        <td>
+                            <select id="report_schedule" name="tiny_woo_sync_settings[report_schedule]">
+                                <option value="daily" <?php selected($report_schedule, 'daily'); ?>><?php esc_html_e('Diariamente', 'tiny-woo-sync'); ?></option>
+                                <option value="weekly" <?php selected($report_schedule, 'weekly'); ?>><?php esc_html_e('Semanalmente', 'tiny-woo-sync'); ?></option>
+                                <option value="monthly" <?php selected($report_schedule, 'monthly'); ?>><?php esc_html_e('Mensalmente', 'tiny-woo-sync'); ?></option>
+                            </select>
+                            <p class="description">
+                                Próximo relatório: <strong><?php echo esc_html($next_report_formatted); ?></strong>
+                            </p>
+                            <button type="button" class="button" id="send-test-report" style="margin-top: 8px;">
+                                <?php esc_html_e('Enviar relatório de teste', 'tiny-woo-sync'); ?>
+                            </button>
+                            <span id="test-report-status"></span>
                         </td>
                     </tr>
                 </table>
@@ -394,6 +460,46 @@ jQuery(document).ready(function($) {
             },
             error: function() {
                 status.html('<span style="color: red;">✗ Erro ao sincronizar produto</span>');
+            },
+            complete: function() {
+                button.prop('disabled', false);
+            }
+        });
+    });
+
+    // Enviar relatório de teste
+    $('#send-test-report').on('click', function() {
+        var button = $(this);
+        var status = $('#test-report-status');
+
+        button.prop('disabled', true);
+        status.html('<span style="color: blue;">⟳ Enviando...</span>');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'tiny_woo_send_test_report',
+                nonce: '<?php echo wp_create_nonce('tiny_woo_sync_nonce'); ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    status.html('<span style="color: green;">✓ ' + response.data + '</span>');
+                } else {
+                    status.html('<span style="color: red;">✗ ' + (response.data || 'Erro ao enviar relatório') + '</span>');
+                }
+            },
+            error: function(xhr) {
+                var msg = 'Erro ao enviar relatório';
+                if (xhr.responseJSON && xhr.responseJSON.data) {
+                    msg = xhr.responseJSON.data;
+                } else if (xhr.responseText) {
+                    try {
+                        var json = JSON.parse(xhr.responseText);
+                        if (json.data) msg = json.data;
+                    } catch (e) {}
+                }
+                status.html('<span style="color: red;">✗ ' + msg + '</span>');
             },
             complete: function() {
                 button.prop('disabled', false);

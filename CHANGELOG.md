@@ -7,6 +7,25 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
+## [0.3.0] - 15/02/2026
+
+### ✨ Novos Recursos
+
+#### Relatório por E-mail
+- **Adicionado** sistema de envio de relatório de sincronização por e-mail
+- **Relatório** lista todos os produtos atualizados no período (nome, SKU, data/hora)
+- **Template** usa a estrutura e estilos do WooCommerce (header, footer, tabelas)
+- **Agendamento** diário, semanal ou mensal via WP-Cron
+- **Configurações** na página do plugin: ativar, e-mail(s) do destinatário, frequência
+- **Botão** "Enviar relatório de teste" para verificar o envio imediatamente
+
+### 🔧 Melhorias
+
+- **Adicionado** intervalos `weekly` e `monthly` ao cron do WordPress
+- **Adicionado** método `get_updated_products_logs()` no Logger para consulta por período
+
+---
+
 ## [0.2.0] - 15/02/2026
 
 ### ✨ Novos Recursos

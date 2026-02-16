@@ -3,7 +3,7 @@
  * Plugin Name: DW Atualiza Produtos for Tiny ERP
  * Plugin URI: http://github.com/agenciadw/tiny-to-woocommerce-auto-sync
  * Description: Sincroniza automaticamente produtos do Tiny ERP para WooCommerce via API, atualizando preços, estoque, peso e dimensões.
- * Version: 0.2.0
+ * Version: 0.3.0
  * Author: David William da Costa
  * Author URI: https://github.com/agenciadw/
  * Text Domain: tiny-woo-sync
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Constantes do plugin
-define('TINY_WOO_SYNC_VERSION', '0.2.0');
+define('TINY_WOO_SYNC_VERSION', '0.3.0');
 define('TINY_WOO_SYNC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TINY_WOO_SYNC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('TINY_WOO_SYNC_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -87,6 +87,7 @@ class Tiny_WooCommerce_Auto_Sync {
         require_once TINY_WOO_SYNC_PLUGIN_DIR . 'includes/class-logger.php';
         require_once TINY_WOO_SYNC_PLUGIN_DIR . 'includes/class-tiny-api.php';
         require_once TINY_WOO_SYNC_PLUGIN_DIR . 'includes/class-sync-manager.php';
+        require_once TINY_WOO_SYNC_PLUGIN_DIR . 'includes/class-sync-report.php';
         require_once TINY_WOO_SYNC_PLUGIN_DIR . 'includes/class-settings.php';
         require_once TINY_WOO_SYNC_PLUGIN_DIR . 'admin/class-admin-page.php';
     }
@@ -110,6 +111,7 @@ class Tiny_WooCommerce_Auto_Sync {
         Tiny_WooCommerce_Logger::get_instance();
         Tiny_WooCommerce_Settings::get_instance();
         Tiny_WooCommerce_Sync_Manager::get_instance();
+        Tiny_WooCommerce_Sync_Report::get_instance();
         Tiny_WooCommerce_Admin_Page::get_instance();
 
         // Carrega tradução
@@ -148,7 +150,10 @@ class Tiny_WooCommerce_Auto_Sync {
                 'sync_interval' => 'hourly',
                 'batch_size' => 30,
                 'delay_between_requests' => 1.5,
-                'log_retention_days' => 30
+                'log_retention_days' => 30,
+                'report_email_enabled' => false,
+                'report_email' => get_option('admin_email'),
+                'report_schedule' => 'daily'
             ));
         }
 
@@ -159,17 +164,21 @@ class Tiny_WooCommerce_Auto_Sync {
         if (!wp_next_scheduled('tiny_woo_sync_cron') && $sync_enabled) {
             wp_schedule_event(time(), $interval, 'tiny_woo_sync_cron');
         }
+
+        // Agenda relatório por e-mail
+        if (file_exists(TINY_WOO_SYNC_PLUGIN_DIR . 'includes/class-sync-report.php')) {
+            require_once TINY_WOO_SYNC_PLUGIN_DIR . 'includes/class-sync-report.php';
+            Tiny_WooCommerce_Sync_Report::reschedule_report_cron();
+        }
     }
 
     /**
      * Desativação do plugin
      */
     public static function deactivate() {
-        // Remove cron
-        $timestamp = wp_next_scheduled('tiny_woo_sync_cron');
-        if ($timestamp) {
-            wp_unschedule_event($timestamp, 'tiny_woo_sync_cron');
-        }
+        // Remove crons
+        wp_clear_scheduled_hook('tiny_woo_sync_cron');
+        wp_clear_scheduled_hook('tiny_woo_sync_report_cron');
     }
 }
 
@@ -194,6 +203,16 @@ add_filter('cron_schedules', function($schedules) {
     $schedules['every_30_minutes'] = array(
         'interval' => 1800,
         'display' => __('A cada 30 minutos', 'tiny-woo-sync')
+    );
+
+    $schedules['weekly'] = array(
+        'interval' => 604800,
+        'display' => __('Semanalmente', 'tiny-woo-sync')
+    );
+
+    $schedules['monthly'] = array(
+        'interval' => 2592000,
+        'display' => __('Mensalmente', 'tiny-woo-sync')
     );
 
     return $schedules;

@@ -26,6 +26,7 @@ class Tiny_WooCommerce_Admin_Page {
         add_action('wp_ajax_tiny_woo_test_connection', array($this, 'ajax_test_connection'));
         add_action('wp_ajax_tiny_woo_clear_logs', array($this, 'ajax_clear_logs'));
         add_action('wp_ajax_tiny_woo_delete_logs_by_level', array($this, 'ajax_delete_logs_by_level'));
+        add_action('wp_ajax_tiny_woo_send_test_report', array($this, 'ajax_send_test_report'));
     }
 
     /**
@@ -214,5 +215,28 @@ class Tiny_WooCommerce_Admin_Page {
             'message' => sprintf('%d log(s) excluído(s) com sucesso', $deleted),
             'deleted' => $deleted
         ));
+    }
+
+    /**
+     * AJAX: Envia relatório de teste
+     */
+    public function ajax_send_test_report() {
+        check_ajax_referer('tiny_woo_sync_nonce', 'nonce');
+
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error('Permissão negada');
+        }
+
+        try {
+            $report = Tiny_WooCommerce_Sync_Report::get_instance();
+            $sent = $report->send_report(true);
+
+            if ($sent) {
+                wp_send_json_success('Relatório de teste enviado. Verifique o e-mail configurado.');
+            }
+            wp_send_json_error('Falha ao enviar e-mail. Verifique o destinatário e a configuração de e-mail do servidor.');
+        } catch (Exception $e) {
+            wp_send_json_error('Erro: ' . $e->getMessage());
+        }
     }
 }
